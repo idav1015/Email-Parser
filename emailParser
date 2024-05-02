@@ -1,0 +1,102 @@
+/**
+ * Creates a GUTS ticket for every new message labeled [label]
+ *
+ * Searches through label thread, 
+ * Marks unread messages 
+ * Creates new email from a template 
+ * Email creates a new GUTS ticket with the link needed to be shared
+ * @return {email} return email that calls GUTS API in order to create a new ticket
+ * @createTicket
+ */
+
+function createTicket() {
+  // Get the most recent email thread
+  const label = GmailApp.getUserLabelByName("prueba");
+  const threads = label.getThreads(); // Get threads of label above
+
+  // Get label unread messages
+  for (let i in threads) {
+    const messages = threads[i].getMessages(); // Get messages in threads
+    for (let j in messages) {
+      if (messages[j].isUnread()) {
+        let unreadEmail = messages[j]; 
+        gutsEmail(unreadEmail);
+        unreadEmail.markRead()
+      }
+    }
+  }
+};
+
+/**
+ * Drafts an email that once send it creates a GUTS Ticket
+ * 
+ *@param {email} unread email labled 
+ *@return {body} email body draft
+ * @gutsEmail
+ */
+function gutsEmail(email){
+  const  contact = email.getReplyTo(); // Get email from requestor (sender)
+  const subject = email.getSubject(); // Get email subject
+  const link = splitContent(email); // runs function slipContent to get body email
+  const requestor = getLdap(contact); //Rund function getLdap to get ldap from email address
+
+  sendEmail(requestor,subject,link);
+
+  // console.log(requestor);
+  // console.log(subject);
+  // console.log(link);
+};
+  
+/**
+ * Split email body in lines
+ *@param {email thread} unread email labled 
+ *@return {string} link
+ * @splitContent
+ */
+function splitContent(email){
+  const bodyText = email.getPlainBody(); //Gets txt fortmat body
+  const content = bodyText.split('\n');
+  const link = content[3];
+
+  return link
+};
+
+/**
+ * Get ldap from email address 
+ *@param {email address} - ldap@google.com
+ *@return {string} ldap 
+ * @getLdap
+ */
+function getLdap(contact){
+  const emailAddress = contact; // Example reply-to string
+  const startIndex = emailAddress.indexOf("<"); // Find the index of "<"
+  const endIndex = emailAddress.indexOf("@", startIndex); // Find the index of "@" after "<"
+  
+  const ldap = emailAddress.substring(startIndex + 1, endIndex); // Extract the ldap from email address 
+
+  return ldap
+};
+
+/**
+ * Get ldap from email address 
+ *@param{string} - ldap
+ *@param(string) - subject
+ *@param{string} - link
+ * @sendEmail
+ */
+function sendEmail(ldap, subject, link) {
+  const recipient = "idav1015@gmail.com"; // Email address of the recipient
+  var subject = subject; // Subject of the email
+  var body = "Hello team,\n\n" + 
+             "There has been a request to share the following drive/files:\n" +
+             link + `\n\n` +
+             "Please review this request and approve the file sharing if needed.\n\n" +
+             "Thank you. \n\n\n"+
+             `GUTS REQUESTER:${ldap} \n\n`+ 
+             `GUTS ASIGNEELOGIN:isaacal`
+
+             ; // Body of the email
+
+  // Send the email
+  GmailApp.sendEmail(recipient, subject, body);
+}
